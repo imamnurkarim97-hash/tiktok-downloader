@@ -1,36 +1,25 @@
-import express from "express";
-import axios from "axios";
-import cors from "cors";
-
+const express = require("express");
+const axios = require("axios");
+const cors = require("cors");
 const app = express();
-const PORT = process.env.PORT || 3000;
-
 app.use(cors());
 
-app.get("/api/tiktok", async (req, res) => {
-  const url = req.query.url;
-  if (!url) return res.json({ error: "URL kosong" });
+app.get("/tiktok", async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).json({ error: "URL kosong" });
 
   try {
-    const r = await axios.get("https://tikwm.com/api/", {
-      params: { url }
-    });
+    // Panggil API pihak ketiga
+    const response = await axios.get(`https://tikwm.com/api/?url=${encodeURIComponent(url)}`);
+    const data = response.data;
+    if (data.code !== 0) return res.status(500).json({ error: "Gagal ambil video" });
 
-    if (r.data.code !== 0) {
-      return res.json({ error: "Gagal ambil video" });
-    }
-
-    res.json({
-      play: r.data.data.play,
-      hdplay: r.data.data.hdplay || r.data.data.play,
-      music: r.data.data.music
-    });
-
-  } catch (e) {
-    res.json({ error: "Server error" });
+    // Kirim balik video HD & HD tanpa watermark
+    res.json({ data: { play: data.data.play, hdplay: data.data.hdplay, music: data.data.music } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
-app.listen(PORT, () => {
-  console.log("Backend aktif di port " + PORT);
-});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
