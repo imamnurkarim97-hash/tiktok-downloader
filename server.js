@@ -1,43 +1,45 @@
 // server.js
-const express = require("express");
-const cors = require("cors");
-const axios = require("axios");
+const express = require('express');
+const axios = require('axios');
+const cors = require('cors');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 // Endpoint TikTok Downloader
-app.get("/tiktok", async (req, res) => {
-  const url = req.query.url;
-  if (!url) return res.status(400).json({ error: "Masukkan URL TikTok" });
-
-  try {
-    // Memanggil API pihak ketiga yang bisa ambil video HD tanpa watermark
-    const apiURL = "https://tikwm.com/api/?url=" + encodeURIComponent(url);
-    const response = await axios.get(apiURL);
-    const data = response.data;
-
-    if (data.code !== 0) {
-      return res.status(500).json({ error: "Gagal mengambil video TikTok" });
+app.get('/api/tiktok', async (req, res) => {
+    const url = req.query.url;
+    if (!url) {
+        return res.status(400).json({ error: 'URL TikTok harus diisi' });
     }
 
-    // Format data untuk frontend
-    const videoData = {
-      play: data.data.play,           // SD/HD biasa
-      hdplay: data.data.hdplay || data.data.play, // HD tanpa watermark
-      music: data.data.music          // Audio MP3
-    };
+    try {
+        // Ganti dengan API TikTok downloader yang kamu pakai
+        // Contoh menggunakan layanan downloader99
+        const backendURL = `https://downloader99.vercel.app/api/tiktok?url=${encodeURIComponent(url)}`;
+        const response = await axios.get(backendURL, { timeout: 10000 });
 
-    res.json(videoData);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: "Terjadi kesalahan pada server" });
-  }
+        if (!response.data || !response.data.data) {
+            return res.status(500).json({ error: 'Gagal ambil data video' });
+        }
+
+        const data = response.data.data;
+
+        res.json({
+            video: {
+                play: data.play,
+                hdplay: data.hdplay
+            },
+            music: data.music
+        });
+
+    } catch (err) {
+        console.error('Error fetch TikTok:', err.message);
+        res.status(500).json({ error: 'Gagal ambil video', detail: err.message });
+    }
 });
 
-// Jalankan server
+// Gunakan port Vercel, fallback 3000
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
