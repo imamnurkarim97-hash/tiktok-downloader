@@ -15,8 +15,7 @@ app.get('/api/tiktok', async (req, res) => {
     }
 
     try {
-        // Ganti dengan API TikTok downloader yang kamu pakai
-        // Contoh menggunakan layanan downloader99
+        // Ganti dengan API TikTok downloader yang kamu gunakan
         const backendURL = `https://downloader99.vercel.app/api/tiktok?url=${encodeURIComponent(url)}`;
         const response = await axios.get(backendURL, { timeout: 10000 });
 
@@ -40,6 +39,6 @@ app.get('/api/tiktok', async (req, res) => {
     }
 });
 
-// Gunakan port Vercel, fallback 3000
+// Gunakan port Vercel, fallback ke 3000
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
