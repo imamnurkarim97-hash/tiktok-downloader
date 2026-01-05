@@ -1,35 +1,35 @@
-import axios from "axios";
+// api/tiktok.js
+const axios = require("axios");
 
-export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*"); // biar frontend bisa fetch
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
-
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
-
+module.exports = async (req, res) => {
   const { url } = req.query;
-  if (!url) return res.status(400).json({ error: "URL kosong" });
+
+  if (!url) {
+    return res.status(400).json({ code: 1, msg: "URL kosong" });
+  }
 
   try {
-    const response = await axios.get(
-      `https://api.tikwm.com/?url=${encodeURIComponent(url)}`
+    // Panggil API TikTok pihak ketiga
+    const apiResponse = await axios.get(
+      `https://tikwm.com/api/?url=${encodeURIComponent(url)}`
     );
 
-    const data = response.data;
+    const data = apiResponse.data;
 
-    if (!data || data.code !== 0 || !data.data) {
-      return res.status(500).json({ error: "Gagal ambil video dari API TikTok" });
+    if (data.code !== 0 || !data.data) {
+      return res.status(500).json({ code: 1, msg: "Gagal ambil video TikTok" });
     }
 
-    res.status(200).json({
-      play: data.data.play || null,
-      hdplay: data.data.hdplay || data.data.play || null,
-      music: data.data.music || null
-    });
+    // Format data untuk frontend
+    const videoData = {
+      play: data.data.play,           // Video SD/HD
+      hdplay: data.data.hdplay || data.data.play, // HD tanpa watermark
+      music: data.data.music          // Audio MP3
+    };
 
+    res.status(200).json({ code: 0, data: videoData });
   } catch (err) {
-    console.error("Error TikTok API:", err.message);
-    res.status(500).json({ error: "Error server: " + err.message });
+    console.error("Tiktok API error:", err.message);
+    res.status(500).json({ code: 1, msg: "Terjadi kesalahan server", error: err.message });
   }
-}
+};
