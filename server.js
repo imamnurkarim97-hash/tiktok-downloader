@@ -7,38 +7,34 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Endpoint TikTok Downloader
 app.get('/api/tiktok', async (req, res) => {
-    const url = req.query.url;
-    if (!url) {
-        return res.status(400).json({ error: 'URL TikTok harus diisi' });
+  const url = req.query.url;
+  if (!url) return res.status(400).json({ error: 'URL TikTok harus diisi' });
+
+  try {
+    // Panggil backend downloader (disini downloader99.vercel.app)
+    const backendURL = `https://downloader99.vercel.app/api/tiktok?url=${encodeURIComponent(url)}`;
+    const response = await axios.get(backendURL, { timeout: 10000 });
+
+    if (!response.data || !response.data.data) {
+      return res.status(500).json({ error: 'Gagal ambil data video' });
     }
 
-    try {
-        // Ganti dengan API TikTok downloader yang kamu gunakan
-        const backendURL = `https://downloader99.vercel.app/api/tiktok?url=${encodeURIComponent(url)}`;
-        const response = await axios.get(backendURL, { timeout: 10000 });
+    const data = response.data.data;
 
-        if (!response.data || !response.data.data) {
-            return res.status(500).json({ error: 'Gagal ambil data video' });
-        }
+    res.json({
+      video: {
+        play: data.play,
+        hdplay: data.hdplay
+      },
+      music: data.music
+    });
 
-        const data = response.data.data;
-
-        res.json({
-            video: {
-                play: data.play,
-                hdplay: data.hdplay
-            },
-            music: data.music
-        });
-
-    } catch (err) {
-        console.error('Error fetch TikTok:', err.message);
-        res.status(500).json({ error: 'Gagal ambil video', detail: err.message });
-    }
+  } catch (err) {
+    console.error('Error fetch TikTok:', err.message);
+    res.status(500).json({ error: 'Gagal ambil video', detail: err.message });
+  }
 });
 
-// Gunakan port Vercel, fallback ke 3000
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
