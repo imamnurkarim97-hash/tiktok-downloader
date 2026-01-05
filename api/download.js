@@ -1,26 +1,29 @@
+// api/download.js
 const axios = require("axios");
 
 module.exports = async (req, res) => {
-  const url = req.query.url;
-  if (!url) return res.status(400).send("URL kosong");
+  const { url } = req.query;
+
+  if (!url) return res.status(400).json({ error: "URL kosong" });
 
   try {
-    const r = await axios.get(
-      "https://api.tikwm.com/?url=" + encodeURIComponent(url)
-    );
+    const response = await axios.get(`https://api.tikwm.com/?url=${encodeURIComponent(url)}`);
+    const data = response.data;
 
-    const video =
-      r.data?.data?.hdplay ||
-      r.data?.data?.play;
-
-    if (!video) {
-      return res.status(500).send("Video tidak ditemukan");
+    if (data.code !== 0) {
+      return res.status(500).json({ error: "Gagal ambil video TikTok" });
     }
 
-    // ⬇️ INI KUNCI AUTO DOWNLOAD (REDIRECT SERVER)
-    res.redirect(video);
+    const videoData = {
+      play: data.data.play,
+      hdplay: data.data.hdplay || data.data.play,
+      music: data.data.music
+    };
 
-  } catch (e) {
-    res.status(500).send("Gagal download");
+    return res.status(200).json(videoData);
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Terjadi kesalahan server" });
   }
 };
