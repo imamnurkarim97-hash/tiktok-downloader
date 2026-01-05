@@ -1,46 +1,35 @@
-// File: api/tiktok.js
+// /api/tiktok.js
 import axios from "axios";
 
 export default async function handler(req, res) {
-  // ===== CORS =====
-  res.setHeader("Access-Control-Allow-Origin", "*"); // izinkan semua origin
-  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-  if (req.method === "OPTIONS") {
-    res.status(200).end();
-    return;
-  }
-
-  // ===== AMBIL URL TIKTOK =====
   const { url } = req.query;
-  if (!url) {
-    res.status(400).json({ code: 1, msg: "URL kosong" });
-    return;
-  }
+  if (!url) return res.status(400).json({ error: "URL TikTok diperlukan" });
 
   try {
-    // PANGGIL API TikTok / TikWM
-    // Bisa diganti sesuai API TikTok yang kamu pakai
-    const response = await axios.get(
-      `https://api.tikwm.com/?url=${encodeURIComponent(url)}`
-    );
+    // PANGGIL API pihak ketiga untuk dapatkan link video
+    const apiResp = await axios.get(`https://downloader99.vercel.app/api/tiktok?url=${encodeURIComponent(url)}`);
+    const videoData = apiResp.data?.data || apiResp.data;
 
-    if (!response.data || !response.data.data) {
-      throw new Error("Tidak ada data video dari API");
+    if (!videoData?.play) {
+      return res.status(500).json({ error: "Gagal ambil video" });
     }
 
-    // KIRIM DATA KE FRONTEND
-    res.status(200).json({
-      code: 0,
-      data: response.data.data, // pastikan struktur sama dengan yang di frontend
+    // STREAM VIDEO HD atau HD tanpa watermark
+    const videoURL = videoData.hdplay || videoData.play;
+    const videoResp = await axios.get(videoURL, {
+      responseType: "stream",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://www.tiktok.com/"
+      },
     });
+
+    res.setHeader("Content-Type", "video/mp4");
+    res.setHeader("Content-Disposition", `attachment; filename="tiktok.mp4"`);
+
+    videoResp.data.pipe(res); // relay stream ke frontend
   } catch (err) {
-    console.error("Error ambil video:", err.message);
-    res.status(500).json({
-      code: 1,
-      msg: "Gagal ambil video",
-      error: err.message,
-    });
+    console.error(err.message);
+    res.status(500).json({ error: "Terjadi kesalahan saat download video" });
   }
 }
